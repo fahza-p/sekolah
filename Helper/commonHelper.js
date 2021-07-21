@@ -1,6 +1,5 @@
 exports.generatePagination = (query, sort, nextKey) => {
   const sortField = Object.keys(sort).length == 0 ? null : Object.keys(sort)
-  console.log(sortField)
 
   function nextKeyFn(items) {
     if (items.length === 0) {
@@ -50,12 +49,80 @@ exports.generatePagination = (query, sort, nextKey) => {
   return { paginatedQuery, nextKeyFn };
 }
 
-exports.filter = (comparation) => {
-  switch (comparation) {
-    case "like": return 
-    case "start": return 
-    case "end": return 
-    case "=": return 
-    case "!=": return 
+exports.paginationData = async (db,filter,limit,nextData,sort) => {
+  let totalData = await db.countDocuments(filter)
+  let currentPage = 1
+  let totalPage = Math.ceil(totalData / limit)
+  let totalDisplay = limit
+  if(currentPage == totalPage && (totalData % limit) != 0){
+    totalDisplay = totalData % limit
   }
+
+  let nextKey = {}
+  if(currentPage != totalPage){
+    Object.keys(sort).forEach(val => {
+      nextKey[val] = nextData[val]
+    })
+  }
+  
+  let result = {
+    totalData: totalData,
+    totalPage: totalPage,
+    currentPage: currentPage,
+    totalDisplay: totalDisplay,
+    nextKey : nextKey
+  }
+  return result
+}
+
+exports.filter = (filter) => {
+  let result = {}
+  let split = []
+  for (const [key, value] of Object.entries(filter)) {
+    if(typeof value === 'object' && key !== 'next' && key !== 'sort'){
+      let data = Object.values(value)
+      switch (Object.keys(value)[0]) {
+        case "like": result[key] = {$regex: data[0], $options:"$i"} 
+          break
+        case "start": result[key] = {$regex:`^${data[0]}`, $options:"$i"} 
+          break
+        case "end": result[key] = {$regex:`${data[0]}e$`, $options:"$i"} 
+          break
+        case "=": result[key] = {$eq: data[0]}
+          break
+        case "!=": result[key] = {$ne: data[0]}
+          break
+        case "gt": result[key] = {$gt: data[0]}
+          break
+        case "lt": result[key] = {$lt: data[0]}
+          break
+        case "gte": result[key] = {$gte: data[0]}
+          break
+        case "lte": result[key] = {$lte: data[0]}
+          break
+        case "bet": 
+          split = data[0].split("::")
+          result[key] = {$gt: split[0], $lt: split[1]}
+          break
+        case "betequal": 
+          split = data[0].split("::")
+          result[key] = {$gte: split[0], $lte: split[1]}
+          break
+      }
+    }
+  }
+  return result
+}
+
+exports.sort = (params) => {
+  const splitData = params.split(",")
+  let result = {}
+  splitData.forEach(value => {
+    if(value.charAt(0) == "-"){
+      result[value.substring(1)] = -1
+    } else {
+      result[value] = 1
+    }
+  })
+  return result
 }

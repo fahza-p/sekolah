@@ -16,7 +16,7 @@ let connection = null
 // });
 
 // mongo
-mongoose.set('debug', true);
+// mongoose.set('debug', true);
 mongoose.Promise = global.Promise;
 const database = `mongodb://localhost:27017/latihan`
 

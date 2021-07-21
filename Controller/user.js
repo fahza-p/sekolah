@@ -3,17 +3,25 @@ const respond = require("../Helper/respondHelper")
 const helper = require("../Helper/commonHelper")
 
 exports.findAll = async (req, res) => {
-  const filter = req.query.filter ? req.query.filter : {username:{ $regex: '.*b.*' },email:{$regex:".*g.*"}}
-  const sort = req.query.sort ? req.query.sort : {token:1,username:1}
-  const nextKey = req.query.nextId ? {_id:req.query.nextId,token:null,username:"bupergata2"} : null
-  const limit = req.query.limit ? req.query.limit : 3
+  const filter = req.query ? helper.filter(req.query) : {}
+  const sort = req.query.sort ? req.query.sort : {_id:1}
+  const nextKey = req.query.next ? req.query.next : null
+  const limit = req.query.limit ? parseInt(req.query.limit) : 3
+  // return
   let {paginatedQuery, nextKeyFn} = helper.generatePagination(filter,sort,nextKey)
   try {
     let data = await user.find(paginatedQuery)
       .select(["-password","-__v","-token","-expiredToken"])
       .limit(limit)
       .sort(sort)
-    return respond.success("successfully get data",data,res)
+    let nextData = data[data.length -1]
+    let paginationData = await helper.paginationData(user,filter,limit,nextData,sort)
+    console.log(paginationData)
+    let result = {
+      data:data,
+      pagination: paginationData
+    }
+    return respond.success("successfully get data",result,res)
   } catch (error) {
     console.log(error)
     return respond.failed("Bad Request.",{},res)
